@@ -31,6 +31,12 @@ export const PreviewView = () => {
             </div>
 
             <div>
+                <h2>State</h2>
+
+                <EditorTester mode='State' />
+            </div>
+
+            <div>
                 <h2>Disabled</h2>
 
                 <label style={{ marginBottom: 10 }}>

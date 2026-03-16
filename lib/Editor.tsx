@@ -15,7 +15,7 @@ import { cx, ExtensionCodeBlockTheme } from 'remirror';
 import { AnnotationExtension, BlockquoteExtension, BoldExtension, BulletListExtension, CodeBlockExtension, CodeExtension, HardBreakExtension, HeadingExtension, HorizontalRuleExtension, ImageExtension, ItalicExtension, LinkExtension, ListItemExtension, MarkdownExtension, OrderedListExtension, StrikeExtension, TrailingNodeExtension, UnderlineExtension } from 'remirror/extensions';
 import { BackspaceKeyExtension, ClassNameExtension, ClipboardExtension, ContentLinkExtension, CustomImageView, OnChangeLink, PlainHtmlExtension } from './extensions';
 import { EditorProps } from './props';
-import { AddAITextButton, AddAssetsButton, AddContentsButton, AddHtmlButton, AnnotateButton, AnnotationView, ClassNameButton, Counter, LinkButtons, LinkModal, MarkupView, TitleModal } from './ui';
+import { AddAITextButton, AddAssetsButton, AddContentsButton, AddHtmlButton, AnnotateButton, AnnotationView, ClassNameButton, Counter, FocusHandler, LinkButtons, LinkModal, MarkupView, TitleModal } from './ui';
 import { Icon } from './ui/internal';
 import { EditableNode, htmlToMarkdown, markdownToHtml, supportedLanguages, useDebounceBoolean, useStoredBoolean } from './utils';
 import './Editor.scss';
@@ -122,6 +122,7 @@ export const Editor = (props: EditorProps) => {
 
     const { manager, getContext } = useRemirror({
         stringHandler: mode === 'Markdown' ? 'markdown' : 'html',
+        selection: 'start',
         content: value as never,
         nodeViewComponents: {
             'image': (props: NodeViewComponentProps) => {
@@ -230,7 +231,7 @@ export const Editor = (props: EditorProps) => {
                         </Toolbar>
                     </div>
 
-                    <div className='squidex-editor-main'>
+                    <FocusHandler className='squidex-editor-main'>
                         <div>
                             <OnChangeLink mode={mode} onChange={onChange} value={value} />
 
@@ -266,7 +267,7 @@ export const Editor = (props: EditorProps) => {
                                 </>
                             )}
                         </div>
-                    </div>
+                    </FocusHandler>
 
                     <div className='squidex-editor-counter'>
                         <label>
