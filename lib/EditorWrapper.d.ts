@@ -21,6 +21,9 @@ declare class EditorWrapper {
 
 type EditorValue = string | Node | undefined | null;
 
+/** Key-value map of Squidex image URL query parameters. */
+type AssetImageParams = Record<string, string>;
+
 type Asset = {
     // The alternative text of the image.
     alt?: string;
@@ -29,7 +32,7 @@ type Asset = {
     src: string;
 
     // The mime type.
-    type: string;
+    mimeType: string;
 
     // The file name of the asset.
     fileName: string;
@@ -57,6 +60,36 @@ type OnSelectAIText = () => Promise<string | undefined | null>;
 type OnSelectAssets = () => Promise<Asset[]>;
 type OnSelectContents = () => Promise<Content[]>;
 
+type LinkClassItem = {
+    label: string;
+    value: string;
+};
+
+type LinkClassGroup = {
+    label: string;
+    items: LinkClassItem[];
+};
+
+type LinkClassEntry = LinkClassItem | LinkClassGroup;
+
+type LoadLinkAnchors = (href: string) => Promise<string[]>;
+
+type ToolbarItem =
+    | 'history'
+    | 'headings'
+    | 'textStyle'
+    | 'blockStyle'
+    | 'lists'
+    | 'className'
+    | 'link'
+    | 'assets'
+    | 'contents'
+    | 'aiText'
+    | 'annotation'
+    | 'html'
+    | 'table'
+    | 'markupToggle';
+
 type SquidexEditorMode = 'Html' | 'Markdown' | 'State';
 
 interface UploadRequest {
@@ -80,8 +113,8 @@ interface EditorProps {
     // The name to the app.
     appName: string;
 
-    // The class names.
-    classNames?: ReadonlyArray<string>;
+    // The class names. Accepts plain strings or structured LinkClassEntry groups.
+    classNames?: ReadonlyArray<string | LinkClassEntry>;
 
     // Called when the value has been changed.
     onChange?: OnChange;
@@ -130,6 +163,24 @@ interface EditorProps {
 
     // The annotations.
     annotations?: ReadonlyArray<Annotation> | null;
+
+    // Pre-configured CSS class items for links.
+    linkClassNames?: ReadonlyArray<LinkClassEntry>;
+
+    // Called when the user changes the href in the link dialog.
+    loadLinkAnchors?: LoadLinkAnchors;
+
+    // Controls whether the markup view is editable.
+    markupEditable?: boolean;
+
+    // Toolbar items that should be hidden/disabled by configuration.
+    disabledToolbarItems?: ReadonlyArray<ToolbarItem>;
+
+    // URL of an additional stylesheet injected into the editor at runtime.
+    customStylesheetUrl?: string;
+
+    // Default query parameters for Squidex asset image URLs.
+    assetImageParams?: AssetImageParams;
 }
 
 interface AnnotationSelection {

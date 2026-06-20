@@ -6,7 +6,7 @@
  */
 
 import { command, CommandFunction, extension, ExtensionTag, NodeExtension, NodeExtensionSpec, PrimitiveSelection, Static } from 'remirror';
-import { Content } from '../props';
+import { Content, OnSelectContents } from '../props';
 import { getContentId } from '../utils';
 import { ContentLinkRenderView } from './ContentLinkRenderView';
 
@@ -19,11 +19,18 @@ export interface ContentLinkExtensionOptions {
 
     // Called when a content is to be edited.
     onEditContent: Static<(schemaName: string, id: string) => void>;
+
+    // Called when the content link metadata (href/target/class) should be edited.
+    onEditLink: Static<(pos: number) => void>;
+
+    // Called when the user wants to pick a different content item for an existing link.
+    // Optional – button is hidden when not provided.
+    onSelectContents: Static<OnSelectContents | undefined>;
 }
 
 @extension<ContentLinkExtensionOptions>({
-    defaultOptions: {},
-    staticKeys: ['appName', 'baseUrl', 'onEditContent']
+    defaultOptions: { onSelectContents: undefined },
+    staticKeys: ['appName', 'baseUrl', 'onEditContent', 'onEditLink', 'onSelectContents']
 })
 export class ContentLinkExtension extends NodeExtension<ContentLinkExtensionOptions> {
     public get name(): string {
@@ -46,11 +53,25 @@ export class ContentLinkExtension extends NodeExtension<ContentLinkExtensionOpti
                 contentId: { default: '' },
                 contentTitle: { default: '' },
                 schemaName: { default: '' },
+                href: { default: '' },
+                target: { default: null },
+                linkClass: { default: null },
             },
             toDOM: node => {
-                const href = `${this.options.baseUrl}/api/content/${this.options.appName}/${node.attrs.schemaName}/${node.attrs.contentId}`;
+                const fallbackHref = `${this.options.baseUrl}/api/content/${this.options.appName}/${node.attrs.schemaName}/${node.attrs.contentId}`;
+                const href = node.attrs.href || fallbackHref;
+                const attrs: Record<string, string> = { href };
 
-                return ['a', { href }, node.attrs.contentTitle];
+                if (node.attrs.target) {
+                    attrs.target = node.attrs.target;
+                    attrs.rel = 'noopener noreferrer';
+                }
+
+                if (node.attrs.linkClass) {
+                    attrs.class = node.attrs.linkClass;
+                }
+
+                return ['a', attrs, node.attrs.contentTitle];
             },
             parseDOM: [
                 {
@@ -72,6 +93,9 @@ export class ContentLinkExtension extends NodeExtension<ContentLinkExtensionOpti
                             contentId: content.id,
                             contentTitle: (dom as HTMLElement).innerText,
                             schemaName: content.schemaName,
+                            href,
+                            target: (dom as HTMLAnchorElement).getAttribute('target') ?? null,
+                            linkClass: (dom as HTMLAnchorElement).getAttribute('class') ?? null,
                         };
                     },
                     priority: 100000,
@@ -84,13 +108,49 @@ export class ContentLinkExtension extends NodeExtension<ContentLinkExtensionOpti
 
     @command({})
     public addContent(content: Content, selection?: PrimitiveSelection): CommandFunction {
+        const href = `${this.options.baseUrl}/api/content/${this.options.appName}/${content.schemaName}/${content.id}`;
+
         return this.store.commands.insertNode.original(this.type, {
             attrs: {
                 contentId: content.id,
                 contentTitle: content.title,
                 schemaName: content.schemaName,
+                href,
+                target: null,
+                linkClass: null,
             },
             selection
         });
+    }
+
+    /**
+     * Replaces the content reference at `pos` with a new content item while
+     * preserving the existing display-title, target and linkClass attributes.
+     */
+    @command({})
+    public replaceContentAt(pos: number, content: Content): CommandFunction {
+        const href = `${this.options.baseUrl}/api/content/${this.options.appName}/${content.schemaName}/${content.id}`;
+
+        return ({ state, dispatch }) => {
+            const node = state.doc.nodeAt(pos);
+
+            if (!node || node.type !== this.type) {
+                return false;
+            }
+
+            const attrs = {
+                ...node.attrs,
+                contentId: content.id,
+                schemaName: content.schemaName,
+                href,
+            };
+
+            if (dispatch) {
+                const tr = state.tr.setNodeMarkup(pos, undefined, attrs);
+                dispatch(tr);
+            }
+
+            return true;
+        };
     }
 }

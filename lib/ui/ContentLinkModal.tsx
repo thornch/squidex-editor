@@ -5,12 +5,9 @@
  * Copyright (c) Squidex UG (haftungsbeschränkt). All rights reserved.
  */
 
-import { CommandButton, CommandButtonGroup, useAttrs, useCommands, useCurrentSelection, useRemirrorContext } from '@remirror/react';
+import { CommandButton, CommandButtonGroup, useCommands, useRemirrorContext } from '@remirror/react';
 import * as React from 'react';
-import { getMarkRange } from 'remirror';
-import { LinkExtension } from 'remirror/extensions';
 import { LinkClassEntry, LoadLinkAnchors } from '../props';
-import { useStateWithRef } from '../utils';
 import { isLinkClassGroup } from '../utils/linkConfig';
 import { isValidUrl } from '../utils/links';
 import { DelayedAutoFocusInput, Icon, Modal } from './internal';
@@ -23,19 +20,16 @@ const TARGET_OPTIONS = [
     { value: '_top', label: '_top' },
 ];
 
-interface LinkModalProps {
+interface ContentLinkModalProps {
+    nodePos: number;
     onClose: () => void;
-    // Pre-configured class list (from EditorProps.linkClassNames).
-    // Supports flat items and grouped entries (LinkClassGroup).
-    // If empty or undefined the class selector is not shown.
     linkClassNames?: ReadonlyArray<LinkClassEntry>;
-    // Async loader for anchor fragments. If not provided the anchor
-    // picker is not shown.
     loadLinkAnchors?: LoadLinkAnchors;
 }
 
-export const LinkModal = (props: LinkModalProps) => {
+export const ContentLinkModal = (props: ContentLinkModalProps) => {
     const {
+        nodePos,
         onClose,
         linkClassNames,
         loadLinkAnchors,
@@ -43,54 +37,39 @@ export const LinkModal = (props: LinkModalProps) => {
 
     const commands = useCommands();
     const { getState } = useRemirrorContext({ autoUpdate: true });
-    const linkAttr = useAttrs<LinkExtension>(true).link() as Record<string, unknown> | undefined;
-    const selection = useCurrentSelection();
 
-    const [href, setHref, hrefRef] = useStateWithRef<string>('');
+    const [href, setHref] = React.useState<string>('');
     const [target, setTarget] = React.useState<string>('');
     const [linkClass, setLinkClass] = React.useState<string>('');
     const [text, setText] = React.useState<string>('');
     const [anchor, setAnchor] = React.useState<string>('');
     const [anchors, setAnchors] = React.useState<string[]>([]);
     const [anchorsLoading, setAnchorsLoading] = React.useState(false);
-    const [linkRange, setLinkRange] = React.useState<{ from: number; to: number } | null>(null);
 
-    // Hydrate fields from the currently active link when the dialog opens
-    // or the selection moves.
     React.useEffect(() => {
         const state = getState();
-        const linkType = state.schema.marks.link;
-        let range: { from: number; to: number } | null = null;
+        const node = state.doc.nodeAt(nodePos);
 
-        if (linkType) {
-            const resolved = getMarkRange(state.selection.$from, linkType);
-
-            if (resolved) {
-                range = { from: resolved.from, to: resolved.to };
-            }
+        if (!node) {
+            onClose();
+            return;
         }
 
-        if (!range && !selection.empty) {
-            range = { from: selection.from, to: selection.to };
-        }
-
-        setLinkRange(range);
-
-        const existingHref = (linkAttr?.href as string) ?? '';
+        const existingHref = (node.attrs.href as string) ?? '';
         const hashIdx = existingHref.indexOf('#');
         const baseHref = hashIdx >= 0 ? existingHref.substring(0, hashIdx) : existingHref;
         const existingAnchor = hashIdx >= 0 ? existingHref.substring(hashIdx + 1) : '';
 
         setHref(baseHref);
-        setTarget((linkAttr?.target as string) ?? '');
-        setLinkClass((linkAttr?.linkClass as string) ?? '');
+        setTarget((node.attrs.target as string) ?? '');
+        setLinkClass((node.attrs.linkClass as string) ?? '');
+        setText((node.attrs.contentTitle as string) ?? '');
         setAnchor(existingAnchor);
         setAnchors([]);
-        setText(range ? state.doc.textBetween(range.from, range.to, ' ') : '');
-    }, [getState, linkAttr, selection, setHref]);
+    }, [getState, nodePos, onClose]);
 
     const reloadAnchors = React.useCallback(async () => {
-        if (!loadLinkAnchors || !isValidUrl(hrefRef.current.trim())) {
+        if (!loadLinkAnchors || !isValidUrl(href.trim())) {
             setAnchors([]);
             return;
         }
@@ -98,14 +77,13 @@ export const LinkModal = (props: LinkModalProps) => {
         setAnchorsLoading(true);
 
         try {
-            const list = await loadLinkAnchors(hrefRef.current.trim());
+            const list = await loadLinkAnchors(href.trim());
             setAnchors(list ?? []);
         } catch {
             setAnchors([]);
         } finally {
             setAnchorsLoading(false);
         }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [href, loadLinkAnchors]);
 
     // Auto-reload anchors: wait 300 ms after last keystroke and only if URL
@@ -124,69 +102,57 @@ export const LinkModal = (props: LinkModalProps) => {
         return () => clearTimeout(timer);
     }, [href, loadLinkAnchors, reloadAnchors]);
 
-    const buildFinalHref = React.useCallback(() => {
-        const base = hrefRef.current.trim();
+    const submit = React.useCallback(() => {
+        const state = getState();
+        const node = state.doc.nodeAt(nodePos);
+
+        if (!node) {
+            onClose();
+            return;
+        }
+
+        const base = href.trim();
         const hash = anchor.trim();
-        return hash ? `${base}#${hash}` : base;
-    }, [hrefRef, anchor]);
+        const finalHref = hash ? `${base}#${hash}` : base;
 
-    const submitHref = React.useCallback(() => {
-        const finalHref = buildFinalHref();
-        const from = linkRange?.from ?? selection.from;
-        let to = linkRange?.to ?? selection.to;
+        commands.updateNodeAttributes(nodePos, {
+            ...node.attrs,
+            contentTitle: text,
+            href: finalHref,
+            target: target || null,
+            linkClass: linkClass || null,
+        });
 
-        if (text && to > from) {
-            commands.replaceText({
-                content: text,
-                selection: { from, to },
-                keepSelection: true,
-            });
-
-            to = from + text.length;
-        }
-
-        if (!finalHref) {
-            commands.removeMark({ type: 'link', selection: { from, to }, expand: false });
-        } else {
-            commands.removeMark({ type: 'link', selection: { from, to }, expand: false });
-            commands.applyMark('link', {
-                href: finalHref,
-                auto: false,
-                target: target || null,
-                linkClass: linkClass || null,
-            }, { from, to });
-        }
-
-        commands.selectText(to);
-        commands.focus();
         onClose();
-    }, [buildFinalHref, commands, linkRange?.from, linkRange?.to, onClose, selection.from, selection.to, target, linkClass, text]);
+    }, [anchor, commands, getState, href, linkClass, nodePos, onClose, target, text]);
 
     const doSetHref = React.useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
         setHref(event.target.value);
-    }, [setHref]);
-
-    const doKeyDown = React.useCallback((event: React.KeyboardEvent<HTMLInputElement>) => {
-        if (event.code === 'Enter') submitHref();
-        if (event.code === 'Escape') onClose();
-    }, [onClose, submitHref]);
+    }, []);
 
     const doSetText = React.useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
         setText(event.target.value);
     }, []);
 
-    const showClassSelector = linkClassNames && linkClassNames.length > 0;
-    const showAnchorPicker = !!loadLinkAnchors;
+    const doKeyDown = React.useCallback((event: React.KeyboardEvent<HTMLInputElement>) => {
+        if (event.code === 'Enter') {
+            submit();
+        }
 
-    // Prevent ProseMirror from swallowing mousedown events on native <select>
-    // elements (which would close the dropdown immediately).
-    const stopMouseDown = React.useCallback((e: React.MouseEvent) => {
-        e.stopPropagation();
+        if (event.code === 'Escape') {
+            onClose();
+        }
+    }, [onClose, submit]);
+
+    const stopMouseDown = React.useCallback((event: React.MouseEvent) => {
+        event.stopPropagation();
     }, []);
 
+    const showClassSelector = !!linkClassNames && linkClassNames.length > 0;
+    const showAnchorPicker = !!loadLinkAnchors;
+
     return (
-        <Modal title='Change Link'>
-            {/* ── URL ── */}
+        <Modal title='Change Content Link'>
             <DelayedAutoFocusInput
                 value={href}
                 onChange={doSetHref}
@@ -202,7 +168,6 @@ export const LinkModal = (props: LinkModalProps) => {
                 placeholder='Display text...'
             />
 
-            {/* ── Anchor ── */}
             {showAnchorPicker && (
                 <div className='squidex-editor-modal-anchor'>
                     {anchors.length > 0 ? (
@@ -235,7 +200,6 @@ export const LinkModal = (props: LinkModalProps) => {
                 </div>
             )}
 
-            {/* ── Target + CSS Class in one row ── */}
             <div className='squidex-editor-modal-row'>
                 <select
                     className='squidex-editor-input'
@@ -273,12 +237,11 @@ export const LinkModal = (props: LinkModalProps) => {
                 )}
             </div>
 
-            {/* ── Actions ── */}
             <CommandButtonGroup>
-                <CommandButton commandName='submitLink' enabled
-                    onSelect={submitHref} icon={<Icon type='Check' />} />
+                <CommandButton commandName='submitContentLink' enabled
+                    onSelect={submit} icon={<Icon type='Check' />} />
 
-                <CommandButton commandName='cancelLink' enabled
+                <CommandButton commandName='cancelContentLink' enabled
                     onSelect={onClose} icon={<Icon type='Cancel' />} />
             </CommandButtonGroup>
         </Modal>

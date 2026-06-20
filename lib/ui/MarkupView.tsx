@@ -5,14 +5,19 @@
  * Copyright (c) Squidex UG (haftungsbeschränkt). All rights reserved.
  */
 
-import * as React from 'react';
-import AceEditor from 'react-ace';
-import { SquidexEditorMode } from '../props';
-import { isString } from '../utils';
+import { config as aceConfig } from 'ace-builds';
 import 'ace-builds/src-noconflict/mode-javascript';
 import 'ace-builds/src-noconflict/mode-markdown';
 import 'ace-builds/src-noconflict/mode-html';
 import 'ace-builds/src-noconflict/theme-github';
+import * as React from 'react';
+import AceEditor from 'react-ace';
+import { SquidexEditorMode } from '../props';
+import { isString } from '../utils';
+
+// Disable web-worker loading – the workers are not served from the
+// same path as the bundle and cause a MIME-type error at runtime.
+aceConfig.set('useWorker', false);
 
 export interface MarkupViewProps {
     // The mode of the editor.
@@ -46,8 +51,7 @@ export const MarkupView = ({ editable, mode, onChange, value }: MarkupViewProps)
         }
 
         setEditValue(text);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [mode, value]); // re-run when value changes (component re-mounts on each open)
 
     const aceMode = React.useMemo(() => {
         switch (mode) {

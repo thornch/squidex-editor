@@ -5,6 +5,7 @@
  * Copyright (c) Squidex UG (haftungsbeschränkt). All rights reserved.
  */
 
+import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { rimraf } from 'rimraf';
@@ -60,4 +61,11 @@ async function buildPackages() {
     }
 }
 
-buildPackages();
+buildPackages().then(copyConfigTemplate);
+
+function copyConfigTemplate() {
+    const src  = path.resolve(dirName, 'lib/squidex-editor.config.template.json');
+    const dest = path.resolve(dirName, 'dist/squidex-editor.config.template.json');
+    fs.copyFileSync(src, dest);
+    console.log('Copied squidex-editor.config.template.json → dist/');
+}

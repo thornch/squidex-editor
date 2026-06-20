@@ -1,0 +1,142 @@
+{
+    "_comment": [
+        "Konfiguration für squidex-editor.js – diese Datei neben squidex-editor.js",
+        "in wwwroot/editor/ ablegen. Alle Abschnitte sind optional; fehlt ein Abschnitt,",
+        "ist das zugehörige Feature deaktiviert. Kommentar-Schlüssel (_comment_*)",
+        "werden vom Editor ignoriert."
+    ],
+
+    "link": {
+        "_comment": [
+            "Optionen für den Link-Dialog.",
+            "Fehlt der gesamte 'link'-Block, werden keine erweiterten Link-Features angezeigt."
+        ],
+
+        "_comment_classItems": [
+            "Hierarchische Liste von CSS-Klassen für den Link-Dialog.",
+            "Einzeleinträge: { \"label\": \"...\", \"value\": \"css-klasse\" }",
+            "Gruppen:         { \"label\": \"...\", \"items\": [ ... ] }",
+            "Fehlt dieser Block, ist der Klassen-Selector im Dialog ausgeblendet."
+        ],
+        "classItems": [
+            { "label": "Externer Link",  "value": "icon icon-external-link" },
+            { "label": "Info",           "value": "icon icon-info" },
+            {
+                "label": "Schaltflächen",
+                "items": [
+                    { "label": "Primär",      "value": "btn btn-default" },
+                    { "label": "Sekundär",    "value": "btn btn-primary" },
+                    { "label": "Transparent", "value": "btn btn-negative" }
+                ]
+            },
+            {
+                "label": "Social Media",
+                "items": [
+                    { "label": "Facebook",  "value": "icon icon-facebook" },
+                    { "label": "Instagram", "value": "icon icon-instagram" },
+                    { "label": "Twitter/X", "value": "icon icon-twitter" },
+                    { "label": "LinkedIn",  "value": "icon icon-linkedin" },
+                    { "label": "YouTube",   "value": "icon icon-youtube" }
+                ]
+            }
+        ],
+
+        "_comment_urlMappings": [
+            "Ersetzt interne CMS-API-URLs durch öffentliche Frontend-URLs,",
+            "bevor der Anchor-Loader aufgerufen wird.",
+            "Platzhalter {lang} wird durch den aktiven Sprachcode (ISO 639-1) ersetzt.",
+            "Fehlt dieser Block, werden URLs unverändert übergeben."
+        ],
+        "urlMappings": [
+            {
+                "from": "https://cms.example.com/api/content/myapp/page/",
+                "to":   "https://www.example.com/{lang}/cms/"
+            }
+        ],
+
+        "_comment_anchorQuerySelectors": [
+            "CSS-Selektor zur Erkennung von Seitenabschnitten beim Anchor-Laden.",
+            "Standard falls nicht angegeben: \"a[id],h2,h3,h4\""
+        ],
+        "anchorQuerySelectors": "a[id],h2,h3,h4",
+
+        "_comment_ignoredAnchorsByHost": [
+            "Anchor-IDs, die pro Hostname ausgeblendet werden.",
+            "\"*\" gilt für alle Hosts.",
+            "Leeres Array [] erlaubt alle Anchors für diesen Host."
+        ],
+        "ignoredAnchorsByHost": {
+            "*": [
+                "btt_button",
+                "logo",
+                "footer-logo"
+            ],
+            "staging.example.com": []
+        }
+    },
+
+    "editor": {
+        "_comment": [
+            "Optionen zur Steuerung der Editor-Oberfläche.",
+            "Fehlt der gesamte 'editor'-Block, gelten die Standard-Einstellungen."
+        ],
+
+        "_comment_markupEditable": [
+            "Steuert, ob der Markup-View (Quellcode-Ansicht) editierbar ist.",
+            "Standardwert: true für Markdown-Modus, false für HTML- und State-Modus.",
+            "true  – Quellcode kann direkt bearbeitet werden.",
+            "false – Quellcode ist nur lesbar (readonly)."
+        ],
+        "markupEditable": false,
+
+        "_comment_disabledToolbarItems": [
+            "Liste von Toolbar-Gruppen, die ausgeblendet werden.",
+            "Mögliche Werte:",
+            "  \"history\"      – Rückgängig / Wiederholen",
+            "  \"headings\"     – Überschriften-Auswahl (H1–H6)",
+            "  \"textStyle\"    – Fett, Kursiv, Unterstrichen, Inline-Code",
+            "  \"blockStyle\"   – Blockquote, Code-Block, Trennlinie",
+            "  \"lists\"        – Aufzählungsliste, Nummerierte Liste",
+            "  \"className\"    – CSS-Klassen (nur HTML-Modus; erfordert classNames-Prop bzw. link.classItems)",
+            "  \"link\"         – Link hinzufügen / entfernen",
+            "  \"assets\"       – Asset-Picker (erfordert canSelectAssets)",
+            "  \"contents\"     – Content-Picker (erfordert canSelectContents)",
+            "  \"aiText\"       – KI-Text-Generator (erfordert canSelectAIText)",
+            "  \"annotation\"   – Annotation hinzufügen (erfordert canAddAnnotation)",
+            "  \"html\"         – HTML-Block einfügen (nur HTML-Modus)",
+            "  \"table\"        – Tabelle einfügen (nur HTML-Modus)",
+            "  \"markupToggle\" – Schaltfläche zur Markup-Ansicht"
+        ],
+        "disabledToolbarItems": [],
+
+        "_comment_customStylesheetUrl": [
+            "Optionales zusätzliches CSS, das zur Laufzeit in den Editor geladen wird.",
+            "Der Pfad wird relativ zur Angular-App aufgelöst (gleicher Origin).",
+            "Fehlt dieser Eintrag, wird kein zusätzliches Stylesheet geladen."
+        ],
+        "customStylesheetUrl": "/editor/squidex-editor-custom.css",
+
+        "_comment_assetImageParams": [
+            "Standard-Query-Parameter, die beim Einfügen und Bearbeiten von Asset-Bildern",
+            "an die Squidex-Asset-URL angehängt werden.",
+            "Im Bild-Bearbeitungsdialog werden diese Werte als Vorbelegung angezeigt;",
+            "der Redakteur kann sie pro Bild überschreiben.",
+            "Bereits in der URL gespeicherte Werte haben Vorrang vor den Defaults.",
+            "",
+            "Typische Squidex-Parameter:",
+            "  width   – Zielbreite in Pixeln",
+            "  height  – Zielhöhe in Pixeln",
+            "  mode    – Resize-Modus: Crop | Pad | CropUpsize | ResizePad | BoxPad",
+            "  format  – Ausgabeformat: webp | avif | jpg | png | bmp | tga | tiff",
+            "  cache   – Browser-Cache-TTL in Sekunden (z. B. 3600 = 1 Stunde)",
+            "",
+            "Alle Werte müssen als Zeichenketten angegeben werden.",
+            "Fehlt dieser Block, werden keine Standard-Parameter angehängt."
+        ],
+        "assetImageParams": {
+            "mode": "Crop",
+            "format": "webp",
+            "cache": "3600"
+        }
+    }
+}

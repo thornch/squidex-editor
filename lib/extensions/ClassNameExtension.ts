@@ -6,11 +6,15 @@
  */
 
 import { ApplySchemaAttributes, command, CommandFunction, extension, ExtensionTag, getTextSelection, isElementDomNode, Mark, MarkExtension, MarkExtensionSpec, MarkSpecOverride, omitExtraAttributes, PrimitiveSelection, Static } from "remirror";
+import { LinkClassEntry } from '../props';
+import { flattenClassNameValues } from '../utils/linkConfig';
 import { addClassStyle } from './class-name-styles';
 
 export interface ClassNameOptions {
-    // The class names.
-    classNames: Static<ReadonlyArray<string>>;
+    // The class names. Accepts a flat string array (backward-compatible) or
+    // a structured list of LinkClassItem / LinkClassGroup entries so the
+    // ClassNameButton can render groups with visual indentation.
+    classNames: Static<ReadonlyArray<string | LinkClassEntry>>;
 }
 
 export interface ClassNameAttributes {
@@ -31,7 +35,7 @@ export class ClassNameExtension extends MarkExtension<ClassNameOptions> {
     constructor(options: ClassNameOptions) {
         super(options);
 
-        for (const className of options.classNames || []) {
+        for (const className of flattenClassNameValues(options.classNames || [])) {
             addClassStyle(className, PREFIX);
         }
 
@@ -62,7 +66,7 @@ export class ClassNameExtension extends MarkExtension<ClassNameOptions> {
                                 className = className.substring(PREFIX.length);
                             }
 
-                            if (this.options.classNames?.indexOf(className) >= 0) {
+                            if (this.options.classNames && flattenClassNameValues(this.options.classNames).indexOf(className) >= 0) {
                                 return { ...extra.parse(dom), className };
                             }
                         }

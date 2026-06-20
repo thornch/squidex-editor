@@ -33,6 +33,21 @@ export function addClassStyle(className: string, prefix: string) {
             font-size: 90%;
             color: ${colorHex};
         }
+
+        /* When this class span is nested inside another class span,
+           prepend \u00A0\u00BB\u00A0 (\u00A0=nbsp, \u00BB=\u00BB) per depth level to indicate nesting.
+           The attribute selector [class*="${prefix}"] matches any ancestor
+           that carries an editor class mark, so the rule only fires when
+           there is at least one enclosing class span. Specificity of this
+           rule is intentionally higher (0-3-0) than the base rule (0-2-0)
+           so it overrides without needing !important. */
+        .remirror-editor-wrapper [class*="${prefix}"] .${prefix}${className}::before {
+            content: '\u00A0\u00BB\u00A0[${className}]';
+        }
+
+        .remirror-editor-wrapper [class*="${prefix}"] [class*="${prefix}"] .${prefix}${className}::before {
+            content: '\u00A0\u00BB\u00A0\u00A0\u00BB\u00A0[${className}]';
+        }
     `;
 
     document.head.appendChild(styleElement);

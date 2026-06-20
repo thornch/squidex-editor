@@ -52,8 +52,12 @@ export const OnChangeLink = (props: Pick<EditorProps, 'mode' | 'onChange' | 'val
             switch (mode) {
                 case 'Markdown':
                     return getMarkdown({ doc } as never);
-                case 'Html':
-                    return getHTML({ doc } as never);
+                case 'Html': {
+                    const raw = getHTML({ doc } as never);
+                    // ProseMirror wraps list item content in <p>. Strip the sole
+                    // <p> child of each <li> so the output is clean HTML.
+                    return typeof raw === 'string' ? stripListItemParagraphs(raw) : raw;
+                }
                 default:
                     return doc;
             }
@@ -108,3 +112,25 @@ const EMPTY_RESULTS = [
     '<p style=""></p>',
     '<p class=""></p>'
 ];
+
+/**
+ * ProseMirror wraps list-item content in a paragraph node, producing
+ * <li><p>…</p></li>. Strip the wrapping <p> when it is the sole child
+ * of a <li> so the persisted HTML is clean and predictable.
+ */
+function stripListItemParagraphs(html: string): string {
+    try {
+        const div = document.createElement('div');
+        div.innerHTML = html;
+        div.querySelectorAll('li > p:only-child').forEach(p => {
+            const li = p.parentElement!;
+            while (p.firstChild) {
+                li.insertBefore(p.firstChild, p);
+            }
+            li.removeChild(p);
+        });
+        return div.innerHTML;
+    } catch {
+        return html;
+    }
+}

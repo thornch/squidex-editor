@@ -5,6 +5,9 @@
  * Copyright (c) Squidex UG (haftungsbeschränkt). All rights reserved.
  */
 
+import { AssetImageParams, LinkClassEntry, LinkClassItem } from './utils/linkConfig';
+
+export type { AssetImageParams, LinkClassEntry, LinkClassItem };
 export type Asset = {
     // The alternative text of the image.
     alt?: string;
@@ -46,6 +49,30 @@ export type OnSelectAIText = () => Promise<string | undefined | null>;
 export type OnSelectAssets = () => Promise<Asset[]>;
 export type OnSelectContents = () => Promise<Content[]>;
 
+export type ToolbarItem =
+    | 'history'
+    | 'headings'
+    | 'textStyle'
+    | 'blockStyle'
+    | 'lists'
+    | 'className'
+    | 'link'
+    | 'assets'
+    | 'contents'
+    | 'aiText'
+    | 'annotation'
+    | 'html'
+    | 'table'
+    | 'markupToggle';
+
+/**
+ * Called when the user changes the href in the link dialog.
+ * Should return the list of anchor IDs/names found on the target page
+ * (without the leading #). Return an empty array if none are available.
+ * Returning null / undefined means the anchor picker will not be shown.
+ */
+export type LoadLinkAnchors = (href: string) => Promise<string[]>;
+
 export type SquidexEditorMode = 'Html' | 'Markdown' | 'State';
 
 export interface UploadRequest {
@@ -69,8 +96,9 @@ export interface EditorProps {
     // The name to the app.
     appName: string;
 
-    // The class names.
-    classNames?: ReadonlyArray<string>;
+    // The class names. Accepts plain strings (backward-compatible) or
+    // structured entries (LinkClassItem / LinkClassGroup) for grouped display.
+    classNames?: ReadonlyArray<string | LinkClassEntry>;
 
     // Called when the value has been changed.
     onChange?: OnChange;
@@ -122,6 +150,32 @@ export interface EditorProps {
 
     // Annotation
     annotations?: ReadonlyArray<Annotation> | null;
+
+    // Pre-configured CSS class items for links.
+    // When provided, the link dialog shows a class selector.
+    // Supports flat items (LinkClassItem) and grouped entries (LinkClassGroup).
+    linkClassNames?: ReadonlyArray<LinkClassEntry>;
+
+    // Called when the user types/pastes a URL in the link dialog.
+    // Receives the URL and should resolve to an array of anchor fragment
+    // identifiers (without the leading #) found on the target page.
+    // When not provided or when it returns an empty array the anchor
+    // picker is hidden.
+    loadLinkAnchors?: LoadLinkAnchors;
+
+    // Controls whether the markup view is editable.
+    // Default: true for Markdown mode, false for other modes.
+    markupEditable?: boolean;
+
+    // Toolbar items that should be hidden/disabled by configuration.
+    disabledToolbarItems?: ReadonlyArray<ToolbarItem>;
+
+    // URL of an additional stylesheet injected into the editor at runtime.
+    customStylesheetUrl?: string;
+
+    // Default query parameters for Squidex asset image URLs (e.g. mode, format, cache).
+    // Shown as pre-filled fields in the image edit dialog; the user can override per image.
+    assetImageParams?: AssetImageParams;
 }
 
 export interface AnnotationSelection {

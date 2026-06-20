@@ -12,6 +12,7 @@ export * from './AddHtmlButton';
 export * from './AnnotateButton';
 export * from './AnnotationView';
 export * from './ClassNameButton';
+export * from './ContentLinkModal';
 export * from './Counter';
 export * from './FocusHandler';
 export * from './LinkButtons';

@@ -12,11 +12,14 @@ import { ClassNameExtension } from '../extensions';
 
 export interface ToggleClassMenuItemProps extends Omit<CommandMenuItemProps, 'commandName' | 'active' | 'enabled' | 'attrs' | 'onSelect'> {
     attrs: { className: string };
+    /** Override the displayed label. Defaults to attrs.className. */
+    label?: string;
 }
 
 export const ToggleClassMenuItem = (props: ToggleClassMenuItemProps) => {
     const {
         attrs,
+        label,
         ...rest
     } = props;
 
@@ -35,7 +38,7 @@ export const ToggleClassMenuItem = (props: ToggleClassMenuItemProps) => {
             attrs={attrs}
             enabled
             onSelect={handleSelect}
-            label={attrs?.className || 'No Class'}
+            label={label ?? attrs?.className ?? 'No Class'}
         />
     );
 };
