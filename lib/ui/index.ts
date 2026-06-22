@@ -20,3 +20,4 @@ export * from './LinkModal';
 export * from './MarkupView';
 export * from './StopClick';
 export * from './TitleModal';
+export * from './ToolbarWrapper';

@@ -6,6 +6,7 @@
  */
 
 export * from './colors';
+export * from './escape';
 export * from './hooks';
 export * from './languages';
 export * from './linkConfig';

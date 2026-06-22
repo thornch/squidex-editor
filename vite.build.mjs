@@ -51,7 +51,7 @@ async function buildPackages() {
                         },
                     },
                 },
-                chunkSizeWarningLimit: 2000,
+                chunkSizeWarningLimit: 2100,
                 // We empty the out directory before all builds.
                 emptyOutDir: false,
             },

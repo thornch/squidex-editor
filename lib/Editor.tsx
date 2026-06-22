@@ -5,19 +5,16 @@
  * Copyright (c) Squidex UG (haftungsbeschränkt). All rights reserved.
  */
 
-import { CountExtension } from '@remirror/extension-count';
 import { CodeBlockLanguageSelect } from '@remirror/extension-react-language-select';
-import { CommandButton, CommandButtonGroup, CreateTableButton, EditorComponent, FloatingToolbar, HeadingLevelButtonGroup, HistoryButtonGroup, InsertHorizontalRuleButton, NodeViewComponentProps, Remirror, TableComponents, ThemeProvider, ToggleBlockquoteButton, ToggleBoldButton, ToggleBulletListButton, ToggleCodeBlockButton, ToggleCodeButton, ToggleItalicButton, ToggleOrderedListButton, ToggleUnderlineButton, Toolbar, useActive, useCurrentSelection, useRemirror } from '@remirror/react';
+import { CommandButton, CommandButtonGroup, CreateTableButton, EditorComponent, HeadingLevelButtonGroup, HistoryButtonGroup, InsertHorizontalRuleButton, NodeViewComponentProps, Remirror, TableComponents, ThemeProvider, ToggleBlockquoteButton, ToggleBoldButton, ToggleBulletListButton, ToggleCodeBlockButton, ToggleCodeButton, ToggleItalicButton, ToggleOrderedListButton, ToggleUnderlineButton, Toolbar, useRemirror } from '@remirror/react';
 import { AllStyledComponent } from '@remirror/styles/emotion';
-import classNames from 'classnames';
 import * as React from 'react';
 import { cx, ExtensionCodeBlockTheme } from 'remirror';
-import { AnnotationExtension, BlockquoteExtension, BoldExtension, BulletListExtension, CodeBlockExtension, CodeExtension, HardBreakExtension, HeadingExtension, HorizontalRuleExtension, ImageExtension, ItalicExtension, ListItemExtension, MarkdownExtension, OrderedListExtension, StrikeExtension, TableExtension, TrailingNodeExtension, UnderlineExtension } from 'remirror/extensions';
-import { BackspaceKeyExtension, ClassNameExtension, ClipboardExtension, ContentLinkExtension, CustomImageView, CustomLinkExtension, OnChangeLink, PlainHtmlExtension } from './extensions';
+import { CustomImageView, OnChangeLink, useEditorExtensions } from './extensions';
 import { EditorProps, ToolbarItem } from './props';
-import { AddAITextButton, AddAssetsButton, AddContentsButton, AddHtmlButton, AnnotateButton, AnnotationView, ContentLinkModal, Counter, FocusHandler, LinkButtons, LinkModal, MarkupView, TitleModal } from './ui';
+import { AddAITextButton, AddAssetsButton, AddContentsButton, AddHtmlButton, AnnotateButton, AnnotationView, ContentLinkModal, Counter, FocusHandler, LinkButtons, LinkModal, MarkupView, TitleModal, ToolbarWrapper } from './ui';
 import { Icon } from './ui/internal';
-import { EditableNode, htmlToMarkdown, markdownToHtml, supportedLanguages, useDebounceBoolean, useStoredBoolean } from './utils';
+import { EditableNode, stripHtmlFormatting, useStoredBoolean } from './utils';
 import './Editor.scss';
 
 export const Editor = (props: EditorProps) => {
@@ -107,6 +104,18 @@ export const Editor = (props: EditorProps) => {
         setModalContentLinkPos(pos);
     }, []);
 
+    const extensions = useEditorExtensions({
+        appName,
+        baseUrl,
+        canSelectContents,
+        classNames,
+        mode,
+        onEditContent,
+        onOpenContentLinkModal: doOpenModalContentLink,
+        onSelectContents,
+        onUpload,
+    });
+
     const doCloseModalLink = React.useCallback(() => {
         setModalLink(false);
     }, []);
@@ -120,73 +129,21 @@ export const Editor = (props: EditorProps) => {
     }, []);
 
     // doToggleMarkup is defined after useRemirror so it can access getContext.
-    const extensions = React.useCallback(() => {
-        // linkClassNames is a static option – include it in the deps array
-        // so that the extensions are recreated if it changes.
-        return [
-            new AnnotationExtension({}),
-            new BackspaceKeyExtension(),
-            new BlockquoteExtension(),
-            new BoldExtension({}),
-            new BulletListExtension({ enableSpine: true }),
-            new ClassNameExtension({ classNames: classNames || [] }),
-            new ClipboardExtension({ mode }),
-            new CodeBlockExtension({ supportedLanguages, nodeOverride: { selectable: false } }),
-            new CodeExtension(),
-            new ContentLinkExtension({
-                appName,
-                baseUrl,
-                onEditContent,
-                onEditLink: doOpenModalContentLink,
-                onSelectContents: canSelectContents ? onSelectContents : undefined,
-            }),
-            new CountExtension({}),
-            new HardBreakExtension(),
-            new HeadingExtension({}),
-            new HorizontalRuleExtension({}),
-            new ImageExtension({ uploadHandler: onUpload, nodeOverride: { selectable: true, marks: '_' } }),
-            new ItalicExtension(),
-            new CustomLinkExtension({
-                autoLink: true,
-                markOverride: {
-                    excludes: undefined
-                }
-            }),
-            new ListItemExtension({
-                enableCollapsible: true
-            }),
-            new MarkdownExtension({
-                copyAsMarkdown: mode === 'Markdown',
-                htmlToMarkdown,
-                htmlSanitizer: undefined,
-                markdownToHtml
-            }),
-            new OrderedListExtension(),
-            new PlainHtmlExtension(),
-            new StrikeExtension(),
-            new TableExtension({ resizable: false }),
-            new TrailingNodeExtension({}),
-            new UnderlineExtension(),
-        ];
-    }, [appName, baseUrl, canSelectContents, classNames, doOpenModalContentLink, mode, onEditContent, onSelectContents, onUpload]);
-
     const { manager, getContext } = useRemirror({
         stringHandler: mode === 'Markdown' ? 'markdown' : 'html',
         selection: 'start',
         content: value as never,
         nodeViewComponents: {
-            'image': (props: NodeViewComponentProps) => {
-                return (
-                    <CustomImageView {...props}
-                        appName={appName}
-                        baseUrl={baseUrl}
-                        onEditLink={doOpenModalLinkForNode}
-                        onEditNode={setModalTitle}
-                        onEditAsset={onEditAsset}
-                        onSelectAssets={canSelectAssets ? onSelectAssets : undefined}
-                    />
-                );
-            }
+            'image': (props: NodeViewComponentProps) => (
+                <CustomImageView {...props}
+                    appName={appName}
+                    baseUrl={baseUrl}
+                    onEditLink={doOpenModalLinkForNode}
+                    onEditNode={setModalTitle}
+                    onEditAsset={onEditAsset}
+                    onSelectAssets={canSelectAssets ? onSelectAssets : undefined}
+                />
+            ),
         },
         extensions,
     });
@@ -430,47 +387,3 @@ export const Editor = (props: EditorProps) => {
         </AllStyledComponent>
     );
 };
-
-const ToolbarWrapper = ({ onLinkModal, isToolbarItemDisabled }: { onLinkModal: () => void; isToolbarItemDisabled: (item: ToolbarItem) => boolean; }) => {
-    const active = useActive<CodeBlockExtension>();
-    const selection = useCurrentSelection();
-    const visible = useDebounceBoolean(400, [selection.from, selection.to]);
-
-    if (active.codeBlock()) {
-        return null;
-    }
-
-    return (
-        <FloatingToolbar className={classNames('squidex-editor-floating', { hidden: !visible })}>
-            <fieldset className='squidex-editor-menu-group'>
-                <CommandButtonGroup>
-                    {!isToolbarItemDisabled('textStyle') && (
-                        <>
-                            <ToggleBoldButton />
-                            <ToggleItalicButton />
-                            <ToggleUnderlineButton />
-                            <ToggleCodeButton />
-                        </>
-                    )}
-                    {!isToolbarItemDisabled('link') && <LinkButtons onEdit={onLinkModal} />}
-                </CommandButtonGroup>
-            </fieldset>
-        </FloatingToolbar>
-    );
-};
-
-/**
- * Normalizes HTML by round-tripping through DOMParser, removing the
- * indentation whitespace added by the Ace-based HTML formatter.
- * Without this, ProseMirror interprets the whitespace as text nodes
- * which corrupts the rendered document.
- */
-function stripHtmlFormatting(html: string): string {
-    try {
-        const div = document.createElement('div');
-        div.innerHTML = html;
-        return div.innerHTML;
-    } catch {
-        return html;
-    }
-}

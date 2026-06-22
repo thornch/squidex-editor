@@ -13,3 +13,4 @@ export * from './CustomLinkExtension';
 export * from './ClipboardExtension';
 export * from './OnChangeLink';
 export * from './PlainHtmlExtension';
+export * from './useEditorExtensions';
